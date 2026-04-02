@@ -119,7 +119,7 @@ async function loadAndExtractPDF(data) {
 }
 
 
-// --- 3. The Virtual Pagination Engine (Fast Sentence Splitting) ---
+// --- 3. The Virtual Pagination Engine (Fast Sentence Splitting)   ---
 function paginateVirtually() {
     if (extractedParagraphs.length === 0) return;
 
