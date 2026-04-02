@@ -97,3 +97,4 @@ body.mode-vertical #prev-page, body.mode-vertical #next-page { display: none; }
 
 /* Loader */
 #loader { position: fixed; inset: 0; background: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: center; z-index: 10000; font-family: sans-serif; font-size: 1.2rem; }
+

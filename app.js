@@ -52,8 +52,8 @@ async function loadAndExtractPDF(data) {
             
             textContent.items.forEach(item => {
                 const str = item.str.trim();
+                
                 if (!str && !item.hasEOL) {
-                    // It's just an empty space item, ensure we have a space
                     if (currentP.length > 0 && !currentP.endsWith(' ')) currentP += ' ';
                     return;
                 }
@@ -62,28 +62,32 @@ async function loadAndExtractPDF(data) {
                 const fontSize = Math.abs(item.transform[0]); 
                 const fontName = item.fontName ? item.fontName.toLowerCase() : "";
                 
-                // Determine if this specific item is bold or large (likely a heading)
-                const isBold = fontName.includes('bold') || fontName.includes('black') || fontSize > 14;
+                // 1. STRICTER BOLD CHECK: Removed the arbitrary "fontSize > 14" rule
+                const isBold = fontName.includes('bold') || fontName.includes('black');
 
-                // Typical line spacing is 1.2x to 1.5x the font size. 
-                // If the vertical jump is larger than that, it's a real paragraph break!
+                // Check heading status ONLY on the very first word of a new paragraph
+                if (currentP.trim() === '') {
+                    isCurrentPHeading = isBold; 
+                }
+
                 const yDiff = Math.abs(lastY - currentY);
                 
                 if (lastY !== -1 && yDiff > (fontSize * 1.5)) {
-                    // Push the completed paragraph
+                    
                     if (currentP.trim().length > 0) {
-                        if (isCurrentPHeading) {
+                        // 2. LENGTH HEURISTIC: A real heading is usually short. 
+                        // If it's over 120 characters, it's just a normal paragraph!
+                        if (isCurrentPHeading && currentP.trim().length < 120) {
                             extractedParagraphs.push(`<strong>${currentP.trim()}</strong>`);
                         } else {
                             extractedParagraphs.push(currentP.trim());
                         }
                     }
-                    // Reset for the new paragraph
+                    
                     currentP = '';
-                    isCurrentPHeading = isBold; // Set heading status based on the first word of the new paragraph
+                    isCurrentPHeading = false; // Reset for the next paragraph
                 }
 
-                // Handle hyphenated words at the end of a line (e.g., "ac- count" -> "account")
                 if (currentP.endsWith('-')) {
                     currentP = currentP.slice(0, -1) + str; 
                 } else {
@@ -95,10 +99,13 @@ async function loadAndExtractPDF(data) {
             });
         }
         
-        // Push the final paragraph
+        // Push the final paragraph in the book
         if (currentP.trim().length > 0) {
-            if (isCurrentPHeading) extractedParagraphs.push(`<strong>${currentP.trim()}</strong>`);
-            else extractedParagraphs.push(currentP.trim());
+            if (isCurrentPHeading && currentP.trim().length < 120) {
+                extractedParagraphs.push(`<strong>${currentP.trim()}</strong>`);
+            } else {
+                extractedParagraphs.push(currentP.trim());
+            }
         }
 
         currentPageIndex = 0;
