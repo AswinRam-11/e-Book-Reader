@@ -44,25 +44,65 @@ async function loadAndExtractPDF(data) {
         const pdf = await pdfjsLib.getDocument(data).promise;
         let currentP = '';
         let lastY = -1;
+        let isCurrentPHeading = false;
 
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
             
             textContent.items.forEach(item => {
-                const currentY = item.transform[5];
-                if (lastY !== -1 && Math.abs(lastY - currentY) > 12) {
-                    if (currentP.trim().length > 0) extractedParagraphs.push(currentP.trim());
-                    currentP = '';
+                const str = item.str.trim();
+                if (!str && !item.hasEOL) {
+                    // It's just an empty space item, ensure we have a space
+                    if (currentP.length > 0 && !currentP.endsWith(' ')) currentP += ' ';
+                    return;
                 }
-                currentP += item.str + ' ';
+
+                const currentY = item.transform[5];
+                const fontSize = Math.abs(item.transform[0]); 
+                const fontName = item.fontName ? item.fontName.toLowerCase() : "";
+                
+                // Determine if this specific item is bold or large (likely a heading)
+                const isBold = fontName.includes('bold') || fontName.includes('black') || fontSize > 14;
+
+                // Typical line spacing is 1.2x to 1.5x the font size. 
+                // If the vertical jump is larger than that, it's a real paragraph break!
+                const yDiff = Math.abs(lastY - currentY);
+                
+                if (lastY !== -1 && yDiff > (fontSize * 1.5)) {
+                    // Push the completed paragraph
+                    if (currentP.trim().length > 0) {
+                        if (isCurrentPHeading) {
+                            extractedParagraphs.push(`<strong>${currentP.trim()}</strong>`);
+                        } else {
+                            extractedParagraphs.push(currentP.trim());
+                        }
+                    }
+                    // Reset for the new paragraph
+                    currentP = '';
+                    isCurrentPHeading = isBold; // Set heading status based on the first word of the new paragraph
+                }
+
+                // Handle hyphenated words at the end of a line (e.g., "ac- count" -> "account")
+                if (currentP.endsWith('-')) {
+                    currentP = currentP.slice(0, -1) + str; 
+                } else {
+                    if (currentP.length > 0 && !currentP.endsWith(' ')) currentP += ' ';
+                    currentP += str;
+                }
+
                 lastY = currentY;
             });
         }
-        if (currentP.trim().length > 0) extractedParagraphs.push(currentP.trim());
+        
+        // Push the final paragraph
+        if (currentP.trim().length > 0) {
+            if (isCurrentPHeading) extractedParagraphs.push(`<strong>${currentP.trim()}</strong>`);
+            else extractedParagraphs.push(currentP.trim());
+        }
 
         currentPageIndex = 0;
-        paginateVirtually(); // Run the pagination engine
+        paginateVirtually(); 
 
     } catch (error) {
         console.error("PDF Read Error:", error);
@@ -106,7 +146,7 @@ function paginateVirtually() {
 
     extractedParagraphs.forEach(text => {
         const p = document.createElement('p');
-        p.textContent = text;
+        p.innerHTML = text; // <--- TO THIS
         tempDiv.appendChild(p);
 
         if (tempDiv.clientHeight <= maxHeight) {
@@ -128,11 +168,11 @@ function paginateVirtually() {
                 if (!sentence) continue;
 
                 const testText = currentText + (currentText ? ' ' : '') + sentence;
-                splitP.textContent = testText;
+                splitP.innerHTML = testText;
 
                 if (tempDiv.clientHeight > maxHeight) {
                     // This sentence caused the overflow
-                    splitP.textContent = currentText;
+                    splitP.innerHTML = currentText
                     
                     if (currentText.trim()) {
                         // Push what we have so far
