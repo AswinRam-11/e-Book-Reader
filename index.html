@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pro Reflow Reader</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body class="theme-light mode-stack">
+
+    <header id="top-bar">
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div class="controls">
+            <input type="file" id="file-upload" accept="application/pdf">
+            <button id="settings-toggle">⚙️ Settings</button>
+        </div>
+    </header>
+
+    <div id="settings-menu" class="hidden">
+        <div class="setting-group" id="theme-group">
+            <label>Theme</label>
+            <button class="active" onclick="setTheme('theme-light', this)">Light</button>
+            <button onclick="setTheme('theme-sepia', this)">Sepia</button>
+            <button onclick="setTheme('theme-dark', this)">Dark</button>
+        </div>
+        <div class="setting-group" id="mode-group">
+            <label>Navigation</label>
+            <button class="active" onclick="setMode('mode-stack', this)">Swipe Stack</button>
+            <button onclick="setMode('mode-vertical', this)">Vertical Scroll</button>
+        </div>
+        <div class="setting-group">
+            <label>Text Size</label>
+            <button onclick="changeFontSize(-2)">A -</button>
+            <button onclick="changeFontSize(2)">A +</button>
+        </div>
+    </div>
+
+    <main id="reader-container">
+        <div id="view-stage">
+            <div id="prev-page" class="slide"></div>
+            <div id="curr-page" class="slide active-slide">
+                <p class="placeholder-text" style="text-align: center; margin-top: 50px;">Upload a PDF to start reading...</p>
+            </div>
+            <div id="next-page" class="slide"></div>
+        </div>
+    </main>
+
+    <div id="loader" class="hidden">
+        <div class="spinner-text">Processing Book...</div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
